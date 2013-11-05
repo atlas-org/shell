@@ -8,8 +8,9 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"syscall"
 
-	//"github.com/gonuts/pty"
+	"github.com/gonuts/pty"
 )
 
 //const _GOSH_beg = "__@@GOSH@@__{{"
@@ -64,18 +65,25 @@ func (sh *Shell) id() int {
 }
 
 func New() (Shell, error) {
+	var err error
+	var sh Shell
+
 	cmd := exec.Command("/bin/sh")
-	stdin, w := io.Pipe()
-	cmd.Stdin = stdin
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true}
 
-	r, stdout := io.Pipe()
-	cmd.Stdout = stdout
-	cmd.Stderr = stdout
+	fd_pty, fd_tty, err := pty.Open()
+	if err != nil {
+		return sh, err
+	}
 
-	sh := Shell{
+	cmd.Stdin = fd_tty
+	cmd.Stdout = fd_tty
+	cmd.Stderr = fd_tty
+
+	sh = Shell{
 		cmd:    cmd,
-		stdin:  w,
-		stdout: r,
+		stdin:  fd_pty,
+		stdout: fd_pty,
 		icmd:   make(chan int),
 		resp:   make(chan response),
 		quit:   make(chan struct{}),
@@ -172,7 +180,7 @@ func New() (Shell, error) {
 			}
 		}
 	}(&sh)
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		return sh, err
 	}
