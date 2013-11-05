@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	//"github.com/gonuts/pty"
 )
 
 //const _GOSH_beg = "__@@GOSH@@__{{"
